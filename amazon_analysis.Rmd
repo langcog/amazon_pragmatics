@@ -12,46 +12,170 @@ output:
     toc: yes
 ---
 
+Note that this report only covers "V2" of the experiment. 
+
+# Data prep
+
+Libraries. 
+
 ```{r}
-library("readxl")
-library("tidyverse")
+library(readxl)
+library(tidyverse)
+library(langcog)
+theme_set(theme_bw())
 ```
 
-```{r}
+Read sheets. 
 
+```{r}
 raw_data <- read_excel("data/summer2016-v2.xlsx", sheet = 1)
 slide_info <- read_excel("data/summer2016-v2.xlsx", sheet = 2)
 targets <- read_excel("data/summer2016-v2.xlsx", sheet = 3)
+```
 
-df <- raw_data
-df[,7:12] <- NA
+Now merge in stimulus information. 
 
-for (row in 1:nrow(df)){
-  for (col in 7:ncol(df)){
-    slide <- names(df)[col]
-    pres_order <- df$order[row]
-    target <- targets$Code[targets$Order == pres_order & targets$Slide == slide]
-    
-    answer <- raw_data[row, col]
-    
-    if (answer == target){
-      df[row, col] <- 1
-    } else {
-      df[row, col] <- 0
-    }
-  }
-  
-}
+```{r}
+df <- raw_data %>%
+  mutate(subid = factor(paste0(as.character(id), "-",
+                        as.character(date)))) %>%
+  gather(stimulus, choice, sacha_vaca:mototaxi) %>%
+  left_join(rename(slide_info, choice = code)) %>%
+  left_join(targets) %>%
+  mutate(correct = choice == target_code) %>%
+  select(-id) 
+```
 
-df$test <- (df$ojitas + df$maloca + df$nino + df$mototaxi)/4
-df$control <- (df$sacha_vaca + df$mariposa)/2
+# Primary analysis 
 
-test_df <- df[,c("age", "control","test")]
-test_df2 <- melt(data = test_df, id.vars = "age", variable.name = "average")
+Now get grand means.
 
-ggplot(test_df2, aes(x = factor(age), colour = factor(average), y = value)) + geom_jitter(width = 0.1, height = 0.1) + xlab("Age (in years)") + ylab("Proportion correct") + labs(colour = "Trial Type") + theme_bw()
+```{r}
+mbs <- df %>%
+  group_by(trial_type, subid) %>%
+  summarise(correct = mean(correct, na.rm=TRUE),
+            n = n())
 
-stats <- df %>% group_by(age) %>% summarise(test = mean(test), control = mean(control))
-View(stats)
+ms <- mbs %>%
+  group_by(trial_type) %>%
+  multi_boot_standard(col = "correct")
 
-cor.test(df$age, df$test, "two.sided", "pearson")
+ggplot(mbs, aes(x = trial_type, y = correct)) + 
+  geom_jitter(width = .05, height = .05) + 
+  geom_pointrange(col = "red", data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) + 
+  geom_hline(lty = 2, yintercept = .33)
+```
+
+Performance is low. Check for developmental trends. Only older kids perform even above chance on control trials. 
+
+```{r}
+mbs <- df %>%
+  group_by(trial_type, age, subid) %>%
+  summarise(correct = mean(correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(trial_type, age) %>%
+  multi_boot_standard(col = "correct")
+
+ggplot(mbs, aes(x = age, y = correct, col = trial_type)) + 
+  geom_jitter(width = .05, height = .05) + 
+  geom_linerange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = ms, 
+                  aes(y = mean)) + 
+  geom_hline(lty = 2, yintercept = .33) + 
+  scale_color_solarized() + 
+  ylab("Proportion correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1)
+```
+
+# Sub analyses - items and items/age
+
+Look at item effects. 
+
+```{r}
+mbs <- df %>%
+  group_by(trial_type, stimulus, subid) %>%
+  summarise(correct = mean(correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(trial_type, stimulus) %>%
+  multi_boot_standard(col = "correct", na.rm=TRUE)
+
+ggplot(mbs, aes(x = stimulus, y = correct, col = trial_type)) + 
+  geom_pointrange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = ms, 
+                  aes(y = mean)) + 
+  geom_hline(lty = 2, yintercept = .33) + 
+  scale_color_solarized() + 
+  ylab("Proportion correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1)
+```
+
+And cross with age?
+
+```{r}
+mbs <- df %>%
+  group_by(trial_type, age, stimulus, subid) %>%
+  summarise(correct = mean(correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(trial_type, age, stimulus) %>%
+  multi_boot_standard(col = "correct", na.rm=TRUE)
+
+ggplot(mbs, aes(x = age, y = correct, col = trial_type)) + 
+  facet_wrap(~stimulus) + 
+  geom_pointrange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = ms, 
+                  aes(y = mean)) + 
+  geom_hline(lty = 2, yintercept = .33) + 
+  scale_color_solarized() + 
+  ylab("Proportion correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1)
+```
+
+# Choice distribution
+
+Examine distribution of choices, rather than correctness.
+
+It appears that most kids (at least until age 6) are not understanding the task much, but they do choose "both" slightly more than target. But they are also pretty close to chance. 
+
+```{r}
+mbs <- df %>%
+  filter(trial_type == "inference") %>%
+  group_by(age, subid, item_type) %>%
+  summarise(n = n()) %>%
+  group_by(age, subid) %>%
+  mutate(prop = n / sum(n), 
+         item_type = factor(item_type)) %>%
+  complete(item_type, nesting(subid), fill = list(prop = 0))
+
+ms <- mbs %>%
+  group_by(age, item_type) %>%
+  multi_boot_standard(col = "prop", na.rm=TRUE)
+
+ggplot(mbs, aes(x = age, y = prop, col = item_type)) + 
+  geom_pointrange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = ms, 
+                  aes(y = mean)) + 
+  geom_hline(lty = 2, yintercept = .33) + 
+  scale_color_solarized() + 
+  ylab("Proportion correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1)
+```
+
