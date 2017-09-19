@@ -146,6 +146,33 @@ ggplot(mbs, aes(x = age, y = correct, col = trial_type)) +
   ylim(0,1)
 ```
 
+# Site analysis
+
+
+```{r}
+mbs <- df %>%
+  group_by(trial_type, age, location, subid) %>%
+  summarise(correct = mean(correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(trial_type, age, location) %>%
+  multi_boot_standard(col = "correct", na.rm=TRUE)
+
+ggplot(mbs, aes(x = age, y = correct, col = trial_type)) + 
+  facet_wrap(~location) + 
+  geom_pointrange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = ms, 
+                  aes(y = mean)) + 
+  geom_hline(lty = 2, yintercept = .33) + 
+  scale_color_solarized() + 
+  ylab("Proportion correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1)
+```
+
 # Choice distribution
 
 Examine distribution of choices, rather than correctness.
