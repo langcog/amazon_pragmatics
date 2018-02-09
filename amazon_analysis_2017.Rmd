@@ -46,7 +46,40 @@ d <- raw_data %>%
   rename(TrialType = `Trial Type`) %>% 
   mutate(Correct = Choice == Target, 
          TargetStimulus = ifelse(Target == "L", L, R)) %>%
-  select(Subid, Age, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) 
+  select(Subid, Age, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) %>%
+  mutate(age_grp = case_when(
+    Age > 4 & Age <= 6 ~ "4 - 6",
+    Age > 6 & Age <= 8 ~ "6 - 8",
+    Age > 8 & Age <= 10 ~ "8 - 10",
+    TRUE ~ "exclude")) 
+  
+```
+
+
+
+```{r}
+subs <- d %>%
+  group_by(Subid, age_grp) %>%
+  summarise(Age = Age[1], 
+            n_trials = sum(!is.na(Correct)), 
+            correct = mean(Correct)) 
+
+ggplot(subs, aes(x = Age)) + 
+  geom_histogram(binwidth = .5, center = 0)
+```
+
+
+```{r}
+subs %>%
+  group_by(age_grp) %>%
+  summarise(mean_age = mean(Age, na.rm=TRUE),
+            sd_age = sd(Age, na.rm=TRUE),
+            max_age = max(Age, na.rm=TRUE), 
+            min_age = min(Age, na.rm=TRUE),
+            n_trials = mean(n_trials), 
+            n = n(), 
+            missing_age = sum(age_grp == "exclude")) %>%
+  knitr::kable()
   
 ```
 
@@ -71,23 +104,12 @@ ggplot(mbs, aes(x = TrialType, y = Correct)) +
   geom_hline(lty = 2, yintercept = .5)
 ```
 
-Age distribution. 
-
-```{r}
-ages <- d %>%
-  group_by(Subid) %>%
-  select(Age) %>%
-  distinct
-
-qplot(Age, data = ages, binwidth = 1)  
-```
-
 Check for developmental trends. First continuous.
 
 
 ```{r}
 mbs <- d %>%
-  group_by(TrialType, Age, Subid) %>%
+  group_by(TrialType, Age, age_grp, Subid) %>%
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
@@ -104,29 +126,23 @@ ggplot(mbs, aes(x = Age, y = Correct, col = TrialType)) +
 Now discrete.
 
 ```{r}
-mbs <- d %>%
-  filter(!is.na(Age)) %>%
-  mutate(Age_Rounded = cut(Age, 3)) %>%
-  group_by(TrialType, Age_Rounded, Subid) %>%
-  summarise(Correct = mean(Correct, na.rm=TRUE),
-            n = n())
-
 ms <- mbs %>%
-  group_by(TrialType, Age_Rounded) %>%
+  group_by(TrialType, age_grp) %>%
   do(data.frame(rbind(smean.cl.boot(.$Correct))))
 
-ggplot(mbs, aes(x = Age_Rounded, y = Correct, col = TrialType)) + 
-  geom_jitter(width = .05, height = .05, alpha = .3) + 
-  geom_pointrange(data = ms, 
+ggplot(filter(mbs, age_grp != "exclude"),
+       aes(x = age_grp, y = Correct, col = TrialType)) + 
+  # geom_jitter(width = .05, height = .05, alpha = .3) + 
+  geom_pointrange(data = filter(ms, age_grp != "exclude"), 
                   aes(y = Mean, ymin = Lower, ymax = Upper), 
-                 position = position_dodge(width = .2)) + 
-  geom_line(data = ms, 
-                  aes(y = Mean)) + 
+                 position = position_dodge(width = .05)) + 
+  geom_line(data = filter(ms, age_grp != "exclude"), 
+                  aes(y = Mean, group = TrialType)) + 
   geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_solarized() + 
-  ylab("Proportion correct") + 
+  ggthemes::scale_color_ptol() + 
+  ylab("Proportion Correct") + 
   xlab("Age Group (years)") + 
-  ylim(0,1)
+  ylim(0,1) 
 ```
 
 # Sub analyses 
