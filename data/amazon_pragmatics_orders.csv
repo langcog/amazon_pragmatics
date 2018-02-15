@@ -1,0 +1,41 @@
+Order,Trial,TrialClass,L,R,Target,Trial Type,Stimulus
+1,1,Warm-up,cap,flower,R,Warm-up,cap/flower
+1,2,Warm-up,dog,chicken,L,Warm-up,dog/chicken
+1,3,Warm-up,chair,soccer ball,R,Warm-up,chair/ball
+1,4,Warm-up,peccary,jaguar,L,Warm-up,peccary/jaguar
+1,5,Control,white and black kene,kene with colors,R,ControlSingle,kene
+1,6,Test,Man + motocarro + basket,Man + basket,L,ControlDouble,man
+1,7,Test,Maloca + tree,Maloca + tree + dry toilet,L,Test,maloca
+1,8,Control,shipibo,gringo,L,ControlSingle,shipibo/gringo
+1,9,Test,Table + plantains + aguaje,Table + plantains,R,Test,table
+1,10,Test,Plate + fish,Plate + rice + fish,R,ControlDouble,plate
+2,1,Warm-up,flower,cap,L,Warm-up,cap/flower
+2,2,Warm-up,chicken,dog,L,Warm-up,dog/chicken
+2,3,Warm-up,soccer ball,chair,R,Warm-up,chair/ball
+2,4,Warm-up,jaguar,peccary,R,Warm-up,peccary/jaguar
+2,5,Test,Plate + rice,Plate + rice + fish,L,Test,plate
+2,6,Test,Table + plantains + aguaje,Table + aguaje,L,ControlDouble,table
+2,7,Control,gringo,shipibo,R,ControlSingle,shipibo/gringo
+2,8,Test,Maloca + dry toilet,Maloca + tree + dry toilet,R,ControlDouble,maloca
+2,9,Test,Man + motocarro + basket,Man + motocarro,R,Test,man
+2,10,Control,kene with colors,white and black kene,L,ControlSingle,kene
+3,1,Warm-up,cap,flower,L,Warm-up,cap/flower
+3,2,Warm-up,dog,chicken,R,Warm-up,dog/chicken
+3,3,Warm-up,chair,soccer ball,L,Warm-up,chair/ball
+3,4,Warm-up,peccary,jaguar,R,Warm-up,peccary/jaguar
+3,5,Control,kene with colors,white and black kene,R,ControlSingle,kene
+3,6,Test,Man + motocarro,Man + motocarro + basket,R,ControlDouble,man
+3,7,Test,Maloca + tree + dry toilet,Maloca + dry toilet,R,Test,maloca
+3,8,Control,gringo,shipibo,L,ControlSingle,shipibo/gringo
+3,9,Test,Table + aguaje,Table + plantains + aguaje,L,Test,table
+3,10,Test,Plate + rice + fish,Plate + rice + fish,L,ControlDouble,plate
+4,1,Warm-up,flower,cap,R,Warm-up,cap/flower
+4,2,Warm-up,chicken,dog,R,Warm-up,dog/chicken
+4,3,Warm-up,soccer ball,chair,L,Warm-up,chair/ball
+4,4,Warm-up,jaguar,peccary,L,Warm-up,peccary/jaguar
+4,5,Test,Plate + rice + fish,Plate + fish,R,Test,plate
+4,6,Test,Table + plantains,Table + plantains + aguaje,R,ControlDouble,table
+4,7,Control,shipibo,gringo,R,ControlSingle,shipibo/gringo
+4,8,Test,Maloca + tree + dry toilet,Maloca + tree,L,ControlDouble,maloca
+4,9,Test,Man + basket,Man + motocarro + basket,L,Test,man
+4,10,Control,white and black kene,kene with colors,L,ControlSingle,kene

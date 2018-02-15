@@ -1,0 +1,85 @@
+Age,Edad,Genero,Lugar de grabacion,Grabacion_order,Grabacion_date,Orden,Trial 1,Trial 2,Trial 3,Trial 4,Trial 5,Trial 6,Trial 7,Trial 8,Trial 9,Trial 10
+4.3,4,F,Bilingue,4,07/11/2017,1,R,L,R,R,R,L,R,L,R,R
+9,8 or 9,M,Bilingue,5,07/11/2017,1,R,L,R,L,R,L,R,L,R,R
+8.2,8,M,Bilingue,6,07/11/2017,1,R,L,R,L,R,L,R,L,R,R
+6.1,6,M,Bilingue,1,07/11/2017,1,NA,L,R,L,R,L,R,L,L,R
+7.3,7,M,Bilingue,2,07/11/2017,1,NA,L,R,L,R,R,L,R,R,R
+5.1,5,F,Bilingue,3,07/11/2017,1,L,L,R,L,L,L,L,R,R,R
+5.6,5,M,Bilingue,7,07/11/2017,1,R,L,R,L,R,L,R,L,R,R
+10.8,10,M,Bilingue,8,07/11/2017,1,R,L,R,L,R,L,R,L,R,R
+6.3,6,M,Bilingue,9,07/11/2017,2,L,L,R,R,R,L,R,R,R,L
+7,6 or 7,M,Bilingue,10,07/11/2017,2,R,L,R,L,R,L,L,R,R,L
+5.7,5,M,Bilingue,11,07/11/2017,2,L,L,R,R,R,R,L,R,R,R
+9.7,9,F,Bilingue,12,07/11/2017,2,L,L,R,R,L,L,L,R,R,L
+7,6 or 7,F,Bilingue,13,07/11/2017,2,L,L,R,R,L,L,L,R,R,L
+7.8,7,F,Bilingue,14,07/11/2017,2,L,L,R,L,R,L,L,R,R,L
+8.5,8,F,Bilingue,15,07/11/2017,2,L,L,R,R,L,L,L,R,L,L
+8.3,8,M,Bilingue,16,07/11/2017,2,L,L,R,R,L,L,L,R,R,L
+6.8,6,F,Bena Jema,5,07/14/2017,2,R,L,R,R,L,R,L,R,R,R
+6.8,6,M,Bena Jema,6,07/14/2017,2,L,L,R,R,R,L,L,L,R,R
+9.4,9,F,Bena Jema,7,07/14/2017,2,L,L,R,R,L,L,L,R,R,L
+10.1,9,F,Bilingue,17,07/11/2017,3,L,R,R,L,L,R,L,L,R,L
+6.4,6,M,Bilingue,18,07/11/2017,3,R,R,L,L,L,R,R,L,L,L
+NA,7,F,Bilingue,19,07/11/2017,3,L,R,L,R,R,L,R,L,R,L
+8.9,8 or 9,F,Bilingue,20,07/11/2017,3,L,R,L,R,R,R,R,L,L,L
+7.3,7,F,Bena Jema,3,07/14/2017,3,L,R,L,R,R,R,L,R,L,L
+5.8,5,F,Bena Jema,4,07/14/2017,3,R,R,L,R,R,R,R,R,R,L
+9.9,9,F,Bilingue,1,07/14/2017,4,R,R,L,L,R,R,R,L,L,L
+8.9,8,F,Bilingue,2,07/14/2017,4,R,R,L,L,L,R,R,L,R,L
+8.2,8,M,Bilingue,3,07/14/2017,4,L,R,L,L,R,R,R,L,L,L
+7.3,7,F,Bilingue,4,07/14/2017,4,R,R,L,L,L,R,L,L,L,L
+NA,9,M,Bilingue,5,07/14/2017,4,L,R,L,L,L,R,R,L,R,R
+10,9 or 10,M,Bilingue,6,07/14/2017,4,R,R,L,R,R,L,R,L,L,L
+6.9,6 or 7,M,Bena Jema,1,07/14/2017,4,R,R,L,L,R,R,R,L,L,L
+9,9,M,Bena Jema,2,07/14/2017,4,R,R,L,L,R,R,R,L,L,L
+8.7,8,M,Bena Jema,14,10/08/2017,1,R,L,R,L,L,L,L,L,R,R
+7.2,7,F,Bena Jema,12,10/08/2017,1,R,L,R,L,R,L,L,R,R,R
+7.1,7,F,Bena Jema,13,10/08/2017,1,R,L,R,L,R,L,R,L,R,R
+7.5,7,M,Bena Jema,10,10/08/2017,2,L,L,R,R,L,L,L,R,R,L
+9.3,9,M,Bena Jema,11,10/08/2017,2,L,L,R,R,L,L,L,R,L,L
+6.6,6,M,CCNN (Bahuanisho),5,05/08/2017,2,L,L,R,R,R,L,R,R,L,L
+7.3,7,F,CCNN (Bahuanisho),6,05/08/2017,2,L,L,R,R,R,L,R,R,R,R
+9.9,9,F,Bena Jema,9,10/08/2017,2,L,L,R,R,L,L,R,R,R,L
+9.6,9,F,Bena Jema,16,10/08/2017,3,L,R,L,R,R,R,R,L,L,L
+10,9,F,Bena Jema,17,10/08/2017,3,L,R,L,R,R,R,R,L,L,L
+9.3,9,M,CCNN (Bahuanisho),3,05/08/2017,3,R,R,L,R,R,R,R,L,R,L
+9,9,M,CCNN (Bahuanisho),4,05/08/2017,3,L,R,L,R,R,R,R,L,R,L
+9.6,9,F,Bena Jema,15,10/08/2017,3,L,R,L,R,R,R,R,L,L,L
+7.5,7,F,Bena Jema,18,10/08/2017,4,R,R,L,L,R,R,R,L,L,L
+8.5,8,F,Bena Jema,19,10/08/2017,4,R,R,L,L,L,R,R,L,L,L
+6,6,F,CCNN (Bahuanisho),34,02/08/2017,3,L,R,L,R,R,R,R,L,R,L
+7,6,M,CCNN (Bahuanisho),1,05/08/2017,3,L,R,L,R,R,R,R,R,R,L
+8.5,8,F,CCNN (Bahuanisho),2,05/08/2017,3,L,R,L,R,R,R,R,R,R,L
+8.8,8,M,CCNN (Bahuanisho),31,02/08/2017,3,L,R,L,R,R,R,L,L,L,L
+NA,8,M,CCNN (Bahuanisho),32,02/08/2017,3,L,R,L,R,R,R,L,L,L,L
+7.3,7,M,CCNN (Bahuanisho),33,02/08/2017,3,L,R,L,R,L,R,R,L,R,L
+8.1,8,F,CCNN (Bahuanisho),28,02/08/2017,4,R,R,L,L,L,R,R,L,R,L
+9.7,9,F,CCNN (Bahuanisho),29,02/08/2017,4,R,R,L,L,L,R,R,L,L,L
+8.4,8,F,CCNN (Bahuanisho),30,02/08/2017,4,L,R,L,L,L,R,R,L,L,L
+8.1,8,F,CCNN (Bahuanisho),25,02/08/2017,4,L,R,L,L,R,L,R,L,L,L
+NA,8,F,CCNN (Bahuanisho),26,02/08/2017,4,R,R,L,L,R,R,R,R,L,L
+7.5,7,F,CCNN (Bahuanisho),27,02/08/2017,4,R,R,L,L,L,R,R,L,R,L
+9.2,9,M,CCNN (Bahuanisho),22,02/08/2017,4,R,R,L,L,R,L,R,L,L,L
+8.7,8,M,CCNN (Bahuanisho),23,02/08/2017,4,R,R,L,L,R,R,R,L,L,L
+5.2,5,M,CCNN (Bahuanisho),24,02/08/2017,4,L,R,L,L,L,L,L,L,L,L
+6.5,5,F,CCNN (Bahuanisho),19,02/08/2017,4,R,R,L,L,L,R,L,R,L,R
+9.3,9,F,CCNN (Bahuanisho),20,02/08/2017,4,L,L,R,R,R,L,R,R,R,L
+5.1,5,F,CCNN (Bahuanisho),21,02/08/2017,4,R,R,L,L,R,R,R,L,L,L
+7.8,7,F,CCNN (Bahuanisho),16,02/08/2017,3,R,L,L,R,L,R,L,L,R,L
+5.5,5,F,CCNN (Bahuanisho),17,02/08/2017,3,L,R,L,R,R,R,L,L,R,L
+6.2,6,M,CCNN (Bahuanisho),18,02/08/2017,3,L,R,L,R,L,R,L,R,R,L
+8.7,8,F,CCNN (Bahuanisho),13,02/08/2017,3,L,R,L,R,R,R,R,L,L,L
+NA,6,F,CCNN (Bahuanisho),14,02/08/2017,3,R,R,L,R,R,R,L,L,L,L
+NA,8,F,CCNN (Bahuanisho),15,02/08/2017,3,R,R,L,R,R,R,R,L,L,L
+8.7,8,F,CCNN (Bahuanisho),10,02/08/2017,2,L,L,R,R,L,L,R,R,L,L
+8.2,8,F,CCNN (Bahuanisho),11,02/08/2017,2,L,L,R,R,L,R,R,R,L,L
+7,7,M,CCNN (Bahuanisho),12,02/08/2017,2,L,L,R,R,R,L,R,R,R,R
+9.7,9,F,CCNN (Bahuanisho),7,02/08/2017,2,L,L,R,R,L,L,R,R,R,L
+7.5,7,M,CCNN (Bahuanisho),8,02/08/2017,2,L,L,R,R,L,L,R,L,L,L
+6,6,F,CCNN (Bahuanisho),9,02/08/2017,2,L,L,R,R,R,L,R,R,R,R
+6.9,6,M,CCNN (Bahuanisho),4,02/08/2017,1,R,L,R,L,R,L,R,L,L,R
+9,8,F,CCNN (Bahuanisho),5,02/08/2017,1,R,L,R,L,R,L,R,L,R,R
+5.4,5,F,CCNN (Bahuanisho),6,02/08/2017,1,R,L,R,L,L,L,L,L,L,L
+7.9,8,F,CCNN (Bahuanisho),1,02/08/2017,1,R,L,R,L,R,L,R,L,L,R
+8,8,F,CCNN (Bahuanisho),2,02/08/2017,1,R,L,R,L,R,R,R,L,L,R
+7,6,M,CCNN (Bahuanisho),3,02/08/2017,1,R,L,R,L,R,L,L,L,R,R

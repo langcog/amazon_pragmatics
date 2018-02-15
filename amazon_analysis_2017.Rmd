@@ -23,6 +23,10 @@ library(tidyverse)
 library(stringr)
 library(langcog)
 library(rms)
+library(lme4)
+library(brms)
+library(knitr)
+library(BayesFactor)
 
 theme_set(theme_bw())
 ```
@@ -89,12 +93,17 @@ Now get grand means.
 
 ```{r}
 mbs <- d %>%
-  group_by(TrialType, Subid) %>%
+  mutate(TrialType = forcats::fct_recode(TrialType, 
+                                         `Control-Double` = "ControlDouble",
+                                         `Control-Single` = "ControlSingle",
+                                         `Warm-Up` = "Warm-up",
+                                         `Pragmatic Inference` = "Test")) %>%
+  group_by(TrialType, Age, age_grp, Subid) %>%
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
 ms <- mbs %>%
-  group_by(TrialType) %>%
+  group_by(TrialType, age_grp) %>%
   do(data.frame(rbind(smean.cl.boot(.$Correct))))
 
 ggplot(mbs, aes(x = TrialType, y = Correct)) + 
@@ -106,12 +115,7 @@ ggplot(mbs, aes(x = TrialType, y = Correct)) +
 
 Check for developmental trends. First continuous.
 
-
 ```{r}
-mbs <- d %>%
-  group_by(TrialType, Age, age_grp, Subid) %>%
-  summarise(Correct = mean(Correct, na.rm=TRUE),
-            n = n())
 
 ggplot(mbs, aes(x = Age, y = Correct, col = TrialType)) + 
   geom_jitter(width = .05, height = .05) + 
@@ -128,7 +132,7 @@ Now discrete.
 ```{r}
 ms <- mbs %>%
   group_by(TrialType, age_grp) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct))))
+  do(data.frame(rbind(smean.cl.boot(.$Correct)))) 
 
 ggplot(filter(mbs, age_grp != "exclude"),
        aes(x = age_grp, y = Correct, col = TrialType)) + 
@@ -139,11 +143,54 @@ ggplot(filter(mbs, age_grp != "exclude"),
   geom_line(data = filter(ms, age_grp != "exclude"), 
                   aes(y = Mean, group = TrialType)) + 
   geom_hline(lty = 2, yintercept = .5) + 
-  ggthemes::scale_color_ptol() + 
+  ggthemes::scale_color_ptol(name = "Trial Type" ) + 
   ylab("Proportion Correct") + 
   xlab("Age Group (years)") + 
-  ylim(0,1) 
+  ylim(0,1) + 
+  ggthemes::theme_few() + 
+  theme(legend.position = "bottom")
 ```
+
+# Stats
+
+```{r}
+d$TrialType <- forcats::fct_relevel(d$TrialType, "Test")
+mod <- glmer(Correct ~ TrialType * scale(Age) + (1|Subid), 
+             family = "binomial", data = filter(d, age_grp != "exclude"))
+summary(mod)
+```
+
+
+```{r}
+d$TrialType <- forcats::fct_relevel(d$TrialType, "Test")
+mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age) + (TrialType|Subid) + (TrialType|Stimulus), 
+             family = "bernoulli", data = filter(d, age_grp != "exclude"))
+summary(mod)
+```
+
+```{r}
+knitr::kable(fixef(mod), digits = 2)
+```
+```{r}
+d$TrialType <- forcats::fct_relevel(d$TrialType, "Warm-up")
+mod2 <- brm(as.numeric(Correct) ~ TrialType * scale(Age) + (TrialType|Subid) + (TrialType|Stimulus), 
+             family = "bernoulli", data = filter(d, age_grp != "exclude"))
+knitr::kable(fixef(mod2), digits = 2)
+```
+
+## Hypothesis tests
+
+```{r}
+ttestBF(filter(mbs,TrialType=="Test")$Correct, mu = .5)
+```
+
+Just 8-10yos
+
+```{r}
+ttestBF(filter(mbs,TrialType=="Test" & age_grp == "8 - 10")$Correct, mu = .5)
+
+```
+
 
 # Sub analyses 
 
