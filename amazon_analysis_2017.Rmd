@@ -5,14 +5,14 @@ date: '`r Sys.Date()`'
 output:
   html_document:
     toc: yes
-  html_notebook:
-    code_folding: hide
-    highlight: tango
-    theme: spacelab
-    toc: yes
+html_notebook:
+  code_folding: hide
+  highlight: tango
+  theme: spacelab
+toc: yes
 ---
 
-This report covers 2017 pilot data.
+This report covers 2017 data collection.
 
 # Data prep
 
@@ -27,8 +27,9 @@ library(lme4)
 library(brms)
 library(knitr)
 library(BayesFactor)
-
-theme_set(theme_bw())
+library(forcats)
+library(ggthemes)
+theme_set(theme_few())
 ```
 
 Read sheets. 
@@ -43,20 +44,26 @@ Now merge in stimulus information.
 ```{r}
 d <- raw_data %>%
   mutate(Subid = 1:n()) %>%
-  rename(Order = Orden) %>%
+  rename(Order = Orden, 
+         Gender = Genero) %>%
   gather(Trial, Choice, `Trial 1`:`Trial 10`) %>%
   mutate(Trial = as.numeric(str_sub(Trial,start = -2, -1))) %>%
   left_join(orders) %>%
   rename(TrialType = `Trial Type`) %>% 
   mutate(Correct = Choice == Target, 
          TargetStimulus = ifelse(Target == "L", L, R)) %>%
-  select(Subid, Age, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) %>%
+  select(Subid, Age, Gender, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) %>%
   mutate(age_grp = case_when(
     Age > 4 & Age <= 6 ~ "4 - 6",
     Age > 6 & Age <= 8 ~ "6 - 8",
     Age > 8 & Age <= 10 ~ "8 - 10",
-    TRUE ~ "exclude")) 
-  
+    TRUE ~ "exclude"),
+    TrialType = fct_recode(TrialType, 
+                           `Control-Double` = "ControlDouble",
+                           `Control-Single` = "ControlSingle",
+                           `Warm-Up` = "Warm-up",
+                           `Pragmatic Inference` = "Test"))
+
 ```
 
 
@@ -66,10 +73,11 @@ subs <- d %>%
   group_by(Subid, age_grp) %>%
   summarise(Age = Age[1], 
             n_trials = sum(!is.na(Correct)), 
-            correct = mean(Correct)) 
+            correct = mean(Correct), 
+            gender = Gender[1]) 
 
 ggplot(subs, aes(x = Age)) + 
-  geom_histogram(binwidth = .5, center = 0)
+  geom_histogram(binwidth = .5, center = 0) 
 ```
 
 
@@ -82,9 +90,11 @@ subs %>%
             min_age = min(Age, na.rm=TRUE),
             n_trials = mean(n_trials), 
             n = n(), 
-            missing_age = sum(age_grp == "exclude")) %>%
-  knitr::kable()
-  
+            missing_age = sum(age_grp == "exclude"), 
+            n_male = sum(gender == "M"), 
+            prop_male = n_male / n) %>%
+  kable(digits = 2)
+
 ```
 
 # Primary analysis 
@@ -93,38 +103,33 @@ Now get grand means.
 
 ```{r}
 mbs <- d %>%
-  mutate(TrialType = forcats::fct_recode(TrialType, 
-                                         `Control-Double` = "ControlDouble",
-                                         `Control-Single` = "ControlSingle",
-                                         `Warm-Up` = "Warm-up",
-                                         `Pragmatic Inference` = "Test")) %>%
   group_by(TrialType, Age, age_grp, Subid) %>%
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
 ms <- mbs %>%
-  group_by(TrialType, age_grp) %>%
+  group_by(TrialType) %>%
   do(data.frame(rbind(smean.cl.boot(.$Correct))))
 
-ggplot(mbs, aes(x = TrialType, y = Correct)) + 
+ggplot(mbs, aes(x = TrialType, y = Correct, group = TrialType)) + 
   geom_jitter(width = .05, height = .05) + 
   geom_pointrange(col = "red", data = ms, 
                   aes(y = Mean, ymin = Lower, ymax = Upper)) + 
-  geom_hline(lty = 2, yintercept = .5)
+  geom_hline(lty = 2, yintercept = .5)  
 ```
 
 Check for developmental trends. First continuous.
 
 ```{r}
-
 ggplot(mbs, aes(x = Age, y = Correct, col = TrialType)) + 
   geom_jitter(width = .05, height = .05) + 
-  geom_smooth(span = 1) + 
+  geom_smooth(span = 1, se=FALSE) + 
   geom_hline(lty = 2, yintercept = .5) + 
   scale_color_solarized() + 
   ylab("Proportion correct") + 
   xlab("Age Group (years)") + 
-  ylim(0,1)
+  ylim(0,1) + 
+  scale_color_ptol()
 ```
 
 Now discrete.
@@ -139,58 +144,132 @@ ggplot(filter(mbs, age_grp != "exclude"),
   # geom_jitter(width = .05, height = .05, alpha = .3) + 
   geom_pointrange(data = filter(ms, age_grp != "exclude"), 
                   aes(y = Mean, ymin = Lower, ymax = Upper), 
-                 position = position_dodge(width = .05)) + 
+                  position = position_dodge(width = .05)) + 
   geom_line(data = filter(ms, age_grp != "exclude"), 
-                  aes(y = Mean, group = TrialType)) + 
+            aes(y = Mean, group = TrialType)) + 
   geom_hline(lty = 2, yintercept = .5) + 
-  ggthemes::scale_color_ptol(name = "Trial Type" ) + 
+  scale_color_ptol(name = "Trial Type" ) + 
   ylab("Proportion Correct") + 
   xlab("Age Group (years)") + 
   ylim(0,1) + 
-  ggthemes::theme_few() + 
   theme(legend.position = "bottom")
 ```
 
 # Stats
 
+## Model
+
+Maximal random effects structure. 
+
+```{r, eval=FALSE}
+d$TrialType <- fct_relevel(d$TrialType, "Pragmatic Inference")
+bayes_mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age) 
+                 + (TrialType | Subid) 
+                 + (TrialType * scale(Age) | Stimulus), 
+                 family = "bernoulli", 
+                 data = filter(d, age_grp != "exclude"),
+                 control = list(adapt_delta = 0.99, 
+                                max_treedepth = 15), 
+                 iter = 5000, 
+                 save_all_pars = TRUE)
+save(bayes_mod, file = "bayes_mod.Rds")
+```
+
 ```{r}
-d$TrialType <- forcats::fct_relevel(d$TrialType, "Test")
-mod <- glmer(Correct ~ TrialType * scale(Age) + (1|Subid), 
-             family = "binomial", data = filter(d, age_grp != "exclude"))
-summary(mod)
+load(file = "bayes_mod.Rds")
+kable(fixef(bayes_mod), digits = 2)
+```
+
+```{r, eval = FALSE}
+bayes_mod_noagestim <- brm(as.numeric(Correct) ~ TrialType * scale(Age) 
+                 + (TrialType | Subid) 
+                 + (TrialType | Stimulus), 
+                 family = "bernoulli", 
+                 data = filter(d, age_grp != "exclude"),
+                 control = list(adapt_delta = 0.99, 
+                                max_treedepth = 15), 
+                 iter = 5000, 
+                 save_all_pars = TRUE)
+save(bayes_mod_noagestim, file = "bayes_mod_noagestim.Rds")
+```
+
+```{r}
+load("bayes_mod_noagestim.Rds")
+kable(fixef(bayes_mod_noagestim), digits = 2)
+```
+
+Bayes factor analysis suggests that the age by stimulus slopes are very much preferred. 
+```{r}
+# h0.bridge <- bridge_sampler(bayes_mod_noagestim, silent = TRUE, maxiter = 20000)
+# h1.bridge <- bridge_sampler(bayes_mod, silent = TRUE, maxiter = 20000)
+
+bf <- bayes_factor(bayes_mod, bayes_mod_noagestim, 
+                   maxiter = 20000, verbose=FALSE, log=TRUE)
+
+bf
 ```
 
 
-```{r}
-d$TrialType <- forcats::fct_relevel(d$TrialType, "Test")
-mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age) + (TrialType|Subid) + (TrialType|Stimulus), 
-             family = "bernoulli", data = filter(d, age_grp != "exclude"))
-summary(mod)
-```
+Investigate age effects in item differences. 
 
 ```{r}
-knitr::kable(fixef(mod), digits = 2)
+mbs <- d %>%
+  group_by(TrialType, Age, age_grp, Stimulus, Subid) %>%
+  summarise(Correct = mean(Correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(TrialType, Stimulus) %>%
+  do(data.frame(rbind(smean.cl.boot(.$Correct))))
+
+
+ggplot(filter(mbs, age_grp != "exclude"),
+       aes(x = age_grp, y = Correct, col = TrialType)) + 
+  # geom_jitter(width = .05, height = .05, alpha = .3) + 
+  geom_pointrange(data = filter(ms, age_grp != "exclude"), 
+                  aes(y = Mean, ymin = Lower, ymax = Upper), 
+                  position = position_dodge(width = .05)) + 
+  geom_line(data = filter(ms, age_grp != "exclude"), 
+            aes(y = Mean, group = TrialType)) + 
+  geom_hline(lty = 2, yintercept = .5) + 
+  scale_color_ptol(name = "Trial Type" ) + 
+  ylab("Proportion Correct") + 
+  xlab("Age Group (years)") + 
+  ylim(0,1) + 
+  theme(legend.position = "bottom")
 ```
-```{r}
-d$TrialType <- forcats::fct_relevel(d$TrialType, "Warm-up")
-mod2 <- brm(as.numeric(Correct) ~ TrialType * scale(Age) + (TrialType|Subid) + (TrialType|Stimulus), 
-             family = "bernoulli", data = filter(d, age_grp != "exclude"))
-knitr::kable(fixef(mod2), digits = 2)
-```
+
 
 ## Hypothesis tests
 
+Control-single all kids. 
+
 ```{r}
-ttestBF(filter(mbs,TrialType=="Test")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Control-Single")$Correct, mu = .5)
+```
+
+Control-single 6-8s and 8-10s:
+
+```{r}
+ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "4 - 6")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "6 - 8")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "8 - 10")$Correct, mu = .5)
+```
+
+
+```{r}
+ttestBF(filter(mbs, TrialType=="Pragmatic Inference")$Correct, mu = .5)
 ```
 
 Just 8-10yos
 
 ```{r}
-ttestBF(filter(mbs,TrialType=="Test" & age_grp == "8 - 10")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "4 - 6")$Correct, mu = .5)
 
+ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8 - 10")$Correct, mu = .5)
+
+ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8 - 10")$Correct, mu = .5)
 ```
-
 
 # Sub analyses 
 
@@ -211,7 +290,7 @@ ms <- mbs %>%
 ggplot(mbs, aes(x = Stimulus, y = Correct, col = TrialType)) + 
   geom_pointrange(data = ms, 
                   aes(y = Mean, ymin = Lower, ymax = Upper), 
-                 position = position_dodge(width = .05)) + 
+                  position = position_dodge(width = .05)) + 
   geom_hline(lty = 2, yintercept = .5) + 
   scale_color_solarized() + 
   ylab("Proportion correct") + 
@@ -237,11 +316,12 @@ ms <- mbs %>%
 ggplot(mbs, aes(x = Target, y = Correct, col = TrialType)) + 
   geom_pointrange(data = ms, 
                   aes(y = Mean, ymin = Lower, ymax = Upper), 
-                 position = position_dodge(width = .05)) + 
+                  position = position_dodge(width = .05)) + 
   geom_hline(lty = 2, yintercept = .5) + 
   scale_color_solarized() + 
   ylab("Proportion correct") + 
-  xlab("Age (years)") + 
+  xlab("Side") + 
   ylim(0,1) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
+
