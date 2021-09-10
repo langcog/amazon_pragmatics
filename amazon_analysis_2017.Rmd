@@ -3,12 +3,12 @@ title: "Analysis of Amazon Stiller Task Data"
 author: "Martin Fortier, Danielle Kellier, and Mike Frank"
 date: '`r Sys.Date()`'
 output:
-  html_document:
-    toc: yes
+html_document:
+toc: yes
 html_notebook:
-  code_folding: hide
-  highlight: tango
-  theme: spacelab
+code_folding: hide
+highlight: tango
+theme: spacelab
 toc: yes
 ---
 
@@ -135,23 +135,61 @@ ggplot(mbs, aes(x = Age, y = Correct, col = TrialType)) +
 Now discrete.
 
 ```{r}
+mbs <- d %>%
+  group_by(TrialType, Age, age_grp, Subid) %>%
+  summarise(Correct = mean(Correct, na.rm=TRUE),
+            n = n())
+
 ms <- mbs %>%
   group_by(TrialType, age_grp) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct)))) 
+  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE)
 
 ggplot(filter(mbs, age_grp != "exclude"),
-       aes(x = age_grp, y = Correct, col = TrialType)) + 
-  # geom_jitter(width = .05, height = .05, alpha = .3) + 
+       aes(x = age_grp, y = Correct, col = TrialType, shape = TrialType)) + 
+  geom_jitter(width = .05, height = .05, alpha = .3) +
   geom_pointrange(data = filter(ms, age_grp != "exclude"), 
-                  aes(y = Mean, ymin = Lower, ymax = Upper), 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
                   position = position_dodge(width = .05)) + 
   geom_line(data = filter(ms, age_grp != "exclude"), 
-            aes(y = Mean, group = TrialType)) + 
+            aes(y = mean, group = TrialType)) + 
   geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_ptol(name = "Trial Type" ) + 
+  scale_color_colorblind(name = "Trial Type" ) + 
+  scale_shape_few(name = "Trial Type" ) + 
   ylab("Proportion Correct") + 
   xlab("Age Group (years)") + 
   ylim(0,1) + 
+  theme(legend.position = "bottom")
+```
+
+Item by age analysis. 
+
+```{r}
+mbs <- d %>%
+  filter(TrialType %in% c("Pragmatic Inference", "Control-Double"),
+         age_grp != "exclude") %>%
+  group_by(TrialType, Stimulus, age_grp, Subid) %>%
+  summarise(Correct = mean(Correct, na.rm=TRUE),
+            n = n())
+
+ms <- mbs %>%
+  group_by(TrialType, Stimulus, age_grp) %>%
+  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE)
+
+ggplot(ms, aes(x = age_grp, y = mean, col = TrialType, shape = TrialType)) + 
+  geom_pointrange(data = ms, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
+                  position = position_dodge(width = .05)) + 
+  geom_line(aes(group = TrialType)) + 
+  geom_hline(lty = 2, yintercept = .5) + 
+  scale_color_manual(name = "Trial Type", 
+                     values = c("Pragmatic Inference" = "#000000", 
+                                "Control-Double" = "#E69F00")) + 
+  scale_shape_manual(name = "Trial Type", 
+                     values = c("Pragmatic Inference" = 1, "Control-Double" = 0)) + 
+  ylab("Proportion Correct") + 
+  xlab("Age (years)") + 
+  ylim(0,1) + 
+  facet_wrap(~Stimulus) + 
   theme(legend.position = "bottom")
 ```
 
@@ -161,84 +199,15 @@ ggplot(filter(mbs, age_grp != "exclude"),
 
 Maximal random effects structure. 
 
-```{r, eval=FALSE}
+```{r}
 d$TrialType <- fct_relevel(d$TrialType, "Pragmatic Inference")
 bayes_mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age) 
                  + (TrialType | Subid) 
                  + (TrialType * scale(Age) | Stimulus), 
                  family = "bernoulli", 
-                 data = filter(d, age_grp != "exclude"),
-                 control = list(adapt_delta = 0.99, 
-                                max_treedepth = 15), 
-                 iter = 5000, 
-                 save_all_pars = TRUE)
-save(bayes_mod, file = "bayes_mod.Rds")
-```
-
-```{r}
-load(file = "bayes_mod.Rds")
+                 data = filter(d, age_grp != "exclude"))
 kable(fixef(bayes_mod), digits = 2)
 ```
-
-```{r, eval = FALSE}
-bayes_mod_noagestim <- brm(as.numeric(Correct) ~ TrialType * scale(Age) 
-                 + (TrialType | Subid) 
-                 + (TrialType | Stimulus), 
-                 family = "bernoulli", 
-                 data = filter(d, age_grp != "exclude"),
-                 control = list(adapt_delta = 0.99, 
-                                max_treedepth = 15), 
-                 iter = 5000, 
-                 save_all_pars = TRUE)
-save(bayes_mod_noagestim, file = "bayes_mod_noagestim.Rds")
-```
-
-```{r}
-load("bayes_mod_noagestim.Rds")
-kable(fixef(bayes_mod_noagestim), digits = 2)
-```
-
-Bayes factor analysis suggests that the age by stimulus slopes are very much preferred. 
-```{r}
-# h0.bridge <- bridge_sampler(bayes_mod_noagestim, silent = TRUE, maxiter = 20000)
-# h1.bridge <- bridge_sampler(bayes_mod, silent = TRUE, maxiter = 20000)
-
-bf <- bayes_factor(bayes_mod, bayes_mod_noagestim, 
-                   maxiter = 20000, verbose=FALSE, log=TRUE)
-
-bf
-```
-
-
-Investigate age effects in item differences. 
-
-```{r}
-mbs <- d %>%
-  group_by(TrialType, Age, age_grp, Stimulus, Subid) %>%
-  summarise(Correct = mean(Correct, na.rm=TRUE),
-            n = n())
-
-ms <- mbs %>%
-  group_by(TrialType, Stimulus) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct))))
-
-
-ggplot(filter(mbs, age_grp != "exclude"),
-       aes(x = age_grp, y = Correct, col = TrialType)) + 
-  # geom_jitter(width = .05, height = .05, alpha = .3) + 
-  geom_pointrange(data = filter(ms, age_grp != "exclude"), 
-                  aes(y = Mean, ymin = Lower, ymax = Upper), 
-                  position = position_dodge(width = .05)) + 
-  geom_line(data = filter(ms, age_grp != "exclude"), 
-            aes(y = Mean, group = TrialType)) + 
-  geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_ptol(name = "Trial Type" ) + 
-  ylab("Proportion Correct") + 
-  xlab("Age Group (years)") + 
-  ylim(0,1) + 
-  theme(legend.position = "bottom")
-```
-
 
 ## Hypothesis tests
 
@@ -320,8 +289,9 @@ ggplot(mbs, aes(x = Target, y = Correct, col = TrialType)) +
   geom_hline(lty = 2, yintercept = .5) + 
   scale_color_solarized() + 
   ylab("Proportion correct") + 
-  xlab("Side") + 
+  xlab("Age (years)") + 
   ylim(0,1) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
+
 
