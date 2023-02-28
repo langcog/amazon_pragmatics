@@ -3,16 +3,15 @@ title: "Analysis of Amazon Stiller Task Data"
 author: "Martin Fortier, Danielle Kellier, and Mike Frank"
 date: '`r Sys.Date()`'
 output:
-html_document:
-toc: yes
-html_notebook:
-code_folding: hide
+  html_document:
+  toc: yes
 highlight: tango
 theme: spacelab
-toc: yes
 ---
 
 This report covers 2017 data collection.
+
+The script has been revised in response to reviewer comments in Winter 2023. 
 
 # Data prep
 
@@ -20,14 +19,11 @@ Libraries.
 
 ```{r}
 library(tidyverse)
-library(stringr)
-library(langcog)
-library(rms)
+library(langcog) # github.com/langcog/langcog
 library(lme4)
 library(brms)
 library(knitr)
 library(BayesFactor)
-library(forcats)
 library(ggthemes)
 theme_set(theme_few())
 ```
@@ -41,36 +37,37 @@ orders <- read_csv("data/amazon_pragmatics_orders.csv")
 
 Now merge in stimulus information. 
 
+Note, we previously excluded children > 10 years old. Now we leave them in. 
+
 ```{r}
-d <- raw_data %>%
-  mutate(Subid = 1:n()) %>%
+d_raw <- raw_data |>
+  mutate(Subid = 1:n()) |>
   rename(Order = Orden, 
-         Gender = Genero) %>%
-  gather(Trial, Choice, `Trial 1`:`Trial 10`) %>%
-  mutate(Trial = as.numeric(str_sub(Trial,start = -2, -1))) %>%
-  left_join(orders) %>%
-  rename(TrialType = `Trial Type`) %>% 
+         Gender = Genero) |>
+  gather(Trial, Choice, `Trial 1`:`Trial 10`) |>
+  mutate(Trial = as.numeric(str_sub(Trial,start = -2, -1))) |>
+  left_join(orders) |>
+  rename(TrialType = `Trial Type`) |>
   mutate(Correct = Choice == Target, 
-         TargetStimulus = ifelse(Target == "L", L, R)) %>%
-  select(Subid, Age, Gender, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) %>%
+         TargetStimulus = ifelse(Target == "L", L, R)) |>
+  select(Subid, Age, Gender, Order, Trial, Choice, Target, TrialType, Stimulus, TargetStimulus, Correct) |>
   mutate(age_grp = case_when(
     Age > 4 & Age <= 6 ~ "4 - 6",
     Age > 6 & Age <= 8 ~ "6 - 8",
-    Age > 8 & Age <= 10 ~ "8 - 10",
-    TRUE ~ "exclude"),
+    Age > 8  ~ "8+"),
     TrialType = fct_recode(TrialType, 
                            `Control-Double` = "ControlDouble",
                            `Control-Single` = "ControlSingle",
                            `Warm-Up` = "Warm-up",
-                           `Pragmatic Inference` = "Test"))
+                           `Pragmatic Inference` = "Test")) 
 
 ```
 
 
 
 ```{r}
-subs <- d %>%
-  group_by(Subid, age_grp) %>%
+subs <- d_raw |>
+  group_by(Subid, age_grp) |>
   summarise(Age = Age[1], 
             n_trials = sum(!is.na(Correct)), 
             correct = mean(Correct), 
@@ -82,72 +79,50 @@ ggplot(subs, aes(x = Age)) +
 
 
 ```{r}
-subs %>%
-  group_by(age_grp) %>%
+subs |>
+  group_by(age_grp) |>
   summarise(mean_age = mean(Age, na.rm=TRUE),
             sd_age = sd(Age, na.rm=TRUE),
             max_age = max(Age, na.rm=TRUE), 
             min_age = min(Age, na.rm=TRUE),
             n_trials = mean(n_trials), 
             n = n(), 
-            missing_age = sum(age_grp == "exclude"), 
+            missing_age = sum(is.na(Age)), 
             n_male = sum(gender == "M"), 
-            prop_male = n_male / n) %>%
+            prop_male = n_male / n) |>
   kable(digits = 2)
 
 ```
+# Primary analysis
 
-# Primary analysis 
-
-Now get grand means.
+Start by filtering missing ages.
 
 ```{r}
-mbs <- d %>%
-  group_by(TrialType, Age, age_grp, Subid) %>%
+d <- d_raw |>
+  mutate(TrialType = fct_relevel(TrialType, "Pragmatic Inference")) |>
+  filter(!is.na(Age))
+```
+
+Now let's make the primary plot. 
+
+```{r}
+mbs <- d |>
+  group_by(TrialType, Age, age_grp, Subid) |>
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
-ms <- mbs %>%
-  group_by(TrialType) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct))))
+ms <- mbs |>
+  group_by(TrialType, age_grp) |>
+  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE) |>
+  mutate(Age = case_when(age_grp == "4 - 6" ~ 5,
+                         age_grp == "6 - 8" ~ 7,
+                         age_grp == "8+" ~ 9))
 
-ggplot(mbs, aes(x = TrialType, y = Correct, group = TrialType)) + 
-  geom_jitter(width = .05, height = .05) + 
-  geom_pointrange(col = "red", data = ms, 
-                  aes(y = Mean, ymin = Lower, ymax = Upper)) + 
-  geom_hline(lty = 2, yintercept = .5)  
-```
-
-Check for developmental trends. First continuous.
-
-```{r}
-ggplot(mbs, aes(x = Age, y = Correct, col = TrialType)) + 
-  geom_jitter(width = .05, height = .05) + 
-  geom_smooth(span = 1, se=FALSE) + 
-  geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_solarized() + 
-  ylab("Proportion correct") + 
-  xlab("Age Group (years)") + 
-  ylim(0,1) + 
-  scale_color_ptol()
-```
-
-Now discrete.
-
-```{r}
-mbs <- d %>%
-  group_by(TrialType, Age, age_grp, Subid) %>%
-  summarise(Correct = mean(Correct, na.rm=TRUE),
-            n = n())
-
-ms <- mbs %>%
-  group_by(TrialType, age_grp) %>%
-  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE)
-
-ggplot(filter(mbs, age_grp != "exclude"),
-       aes(x = age_grp, y = Correct, col = TrialType, shape = TrialType)) + 
-  geom_jitter(width = .05, height = .05, alpha = .3) +
-  geom_pointrange(data = filter(ms, age_grp != "exclude"), 
+ggplot(mbs,
+       aes(x = Age, y = Correct, 
+           col = TrialType, shape = TrialType)) + 
+  geom_jitter(width = 0, height = .05, alpha = .5) +
+  geom_pointrange(data = ms, 
                   aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
                   position = position_dodge(width = .05)) + 
   geom_line(data = filter(ms, age_grp != "exclude"), 
@@ -157,50 +132,50 @@ ggplot(filter(mbs, age_grp != "exclude"),
   scale_shape_few(name = "Trial Type" ) + 
   ylab("Proportion Correct") + 
   xlab("Age Group (years)") + 
-  ylim(0,1) + 
   theme(legend.position = "bottom")
 ```
 
-Item by age analysis. 
+And by items.
 
 ```{r}
-mbs <- d %>%
-  filter(TrialType %in% c("Pragmatic Inference", "Control-Double"),
-         age_grp != "exclude") %>%
-  group_by(TrialType, Stimulus, age_grp, Subid) %>%
+mbs_items <- d |>
+  filter(TrialType %in% c("Pragmatic Inference", 
+                          "Control-Double")) |>
+  group_by(TrialType, Age, age_grp, Stimulus, Subid) |>
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
-ms <- mbs %>%
-  group_by(TrialType, Stimulus, age_grp) %>%
-  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE)
+ms_items <- mbs_items |>
+  group_by(TrialType, Stimulus, age_grp) |>
+  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE) 
 
-ggplot(ms, aes(x = age_grp, y = mean, col = TrialType, shape = TrialType)) + 
-  geom_pointrange(data = ms, 
+ggplot(mbs_items,
+       aes(x = age_grp, y = Correct, 
+           col = TrialType, shape = TrialType)) + 
+  geom_pointrange(data = ms_items, 
                   aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
                   position = position_dodge(width = .05)) + 
-  geom_line(aes(group = TrialType)) + 
+  geom_line(data = ms_items, 
+            aes(y = mean, group = TrialType)) + 
   geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_manual(name = "Trial Type", 
-                     values = c("Pragmatic Inference" = "#000000", 
-                                "Control-Double" = "#E69F00")) + 
-  scale_shape_manual(name = "Trial Type", 
-                     values = c("Pragmatic Inference" = 1, "Control-Double" = 0)) + 
+  scale_color_manual(name = "Trial Type",
+                         values = c("Pragmatic Inference" = "#000000", 
+                                    "Control-Double" = "#E69F00") ) + 
+  scale_shape_few(name = "Trial Type" ) + 
   ylab("Proportion Correct") + 
-  xlab("Age (years)") + 
-  ylim(0,1) + 
-  facet_wrap(~Stimulus) + 
-  theme(legend.position = "bottom")
+  xlab("Age Group (years)") + 
+  theme(legend.position = "bottom") + 
+  facet_wrap(~Stimulus)
 ```
+
 
 # Stats
 
 ## Model
 
-Maximal random effects structure. 
+Maximal random effects structure. Note that this model is no longer included in the manuscript for reasons of parsimony. 
 
-```{r}
-d$TrialType <- fct_relevel(d$TrialType, "Pragmatic Inference")
+```{r eval=FALSE}
 bayes_mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age) 
                  + (TrialType | Subid) 
                  + (TrialType * scale(Age) | Stimulus), 
@@ -209,7 +184,7 @@ bayes_mod <- brm(as.numeric(Correct) ~ TrialType * scale(Age)
 kable(fixef(bayes_mod), digits = 2)
 ```
 
-## Hypothesis tests
+## Bayesian hypothesis tests
 
 Control-single all kids. 
 
@@ -217,74 +192,80 @@ Control-single all kids.
 ttestBF(filter(mbs,TrialType=="Control-Single")$Correct, mu = .5)
 ```
 
-Control-single 6-8s and 8-10s:
+Control-single by age.
 
 ```{r}
 ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "4 - 6")$Correct, mu = .5)
 ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "6 - 8")$Correct, mu = .5)
-ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "8 - 10")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Control-Single" & age_grp == "8+")$Correct, mu = .5)
 ```
 
+Inference trials. 
 
 ```{r}
 ttestBF(filter(mbs, TrialType=="Pragmatic Inference")$Correct, mu = .5)
 ```
 
-Just 8-10yos
+By age.
 
 ```{r}
 ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "4 - 6")$Correct, mu = .5)
 
-ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8 - 10")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "6 - 8")$Correct, mu = .5)
 
-ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8 - 10")$Correct, mu = .5)
+ttestBF(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8+")$Correct, mu = .5)
 ```
 
-# Sub analyses 
+## Frequentist t-tests
 
-## Items 
-
-Look at item effects. 
+Control-single all kids. 
 
 ```{r}
-mbs <- d %>%
-  group_by(TrialType, Stimulus, Subid) %>%
-  summarise(Correct = mean(Correct, na.rm=TRUE),
-            n = n())
-
-ms <- mbs %>%
-  group_by(TrialType, Stimulus) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct))))
-
-ggplot(mbs, aes(x = Stimulus, y = Correct, col = TrialType)) + 
-  geom_pointrange(data = ms, 
-                  aes(y = Mean, ymin = Lower, ymax = Upper), 
-                  position = position_dodge(width = .05)) + 
-  geom_hline(lty = 2, yintercept = .5) + 
-  scale_color_solarized() + 
-  ylab("Proportion correct") + 
-  xlab("Age (years)") + 
-  ylim(0,1) + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+t.test(filter(mbs,TrialType=="Control-Single")$Correct- .5)
 ```
 
-## Side bias 
+By age.
+
+```{r}
+t.test(filter(mbs,TrialType=="Control-Single" & age_grp == "4 - 6")$Correct - .5)
+t.test(filter(mbs,TrialType=="Control-Single" & age_grp == "6 - 8")$Correct - .5)
+t.test(filter(mbs,TrialType=="Control-Single" & age_grp == "8+")$Correct - .5)
+```
+
+Inference trials. 
+
+```{r}
+t.test(filter(mbs, TrialType=="Pragmatic Inference")$Correct - .5)
+```
+
+By age.
+
+```{r}
+t.test(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "4 - 6")$Correct - .5)
+
+t.test(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "6 - 8")$Correct - .5)
+
+t.test(filter(mbs,TrialType=="Pragmatic Inference" & age_grp == "8+")$Correct - .5)
+```
+
+# Side bias 
 
 Look at side biase effects. Not any huge evidence of side bias, though overall test performance higher when target is on the R.
 
 ```{r}
-mbs <- d %>%
-  group_by(TrialType, Target, Subid) %>%
+mbs_side <- d |>
+  group_by(TrialType, Target, Subid) |>
   summarise(Correct = mean(Correct, na.rm=TRUE),
             n = n())
 
-ms <- mbs %>%
-  group_by(TrialType, Target) %>%
-  do(data.frame(rbind(smean.cl.boot(.$Correct))))
+ms_side <- mbs_side |>
+  group_by(TrialType, Target) |>
+  langcog::multi_boot_standard(col = "Correct", na.rm=TRUE) 
 
-ggplot(mbs, aes(x = Target, y = Correct, col = TrialType)) + 
-  geom_pointrange(data = ms, 
-                  aes(y = Mean, ymin = Lower, ymax = Upper), 
+
+ggplot(mbs_side, aes(x = Target, y = Correct, col = TrialType)) + 
+  geom_pointrange(data = ms_side, 
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper), 
                   position = position_dodge(width = .05)) + 
   geom_hline(lty = 2, yintercept = .5) + 
   scale_color_solarized() + 
